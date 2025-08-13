@@ -2,6 +2,7 @@ const express = require("express");
 const fs = require("fs");
 const crypto = require("crypto");
 const app = express();
+const btoa = str => Buffer.from(str, "utf8").toString("base64");
 
 // Whitelist + key storage
 let whitelist = ["Player1", "Player2"];
@@ -36,13 +37,13 @@ app.get("/auth", (req, res) => {
 
     // Create token that lasts 200 days
     let token = crypto.randomBytes(8).toString("hex");
-    let expiresInMs = 200 * 24 * 60 * 60 * 1000; // 200 days
+    let expiresInMs = 200 * 24 * 60 * 60 * 1000;
     activeTokens[token] = { user: username, expires: Date.now() + expiresInMs, used: false };
 
     res.json({ status: "OK", token: token, expires: new Date(Date.now() + expiresInMs).toISOString() });
 });
 
-// Code route → returns obfuscated script
+// Code route → returns encoded script
 app.get("/code", (req, res) => {
     let token = req.query.token;
 
@@ -63,11 +64,14 @@ app.get("/code", (req, res) => {
 
     try {
         let script = fs.readFileSync("real_script_obfuscated.lua", "utf8");
-        tokenData.used = true; // Mark as used
-
-        // Send script in JSON so Lua can parse
-        res.json({ status: "OK", code: script });
+        let encodedScript = btoa(script);
+        tokenData.used = true; // delete after first fetch
+        delete activeTokens[token]; // hard delete token after use
+        res.json({ status: "OK", code: encodedScript });
     } catch (err) {
         res.json({ status: "FAIL", message: "Script not found" });
     }
 });
+
+const port = process.env.PORT || 3000;
+app.listen(port, () => console.log("Server running on port " + port));
