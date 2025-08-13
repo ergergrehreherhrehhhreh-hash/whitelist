@@ -64,11 +64,10 @@ app.get("/code", (req, res) => {
     try {
         let script = fs.readFileSync("real_script_obfuscated.lua", "utf8");
         tokenData.used = true; // Mark as used
-        res.type("text/plain").send(script);
+
+        // Send script in JSON so Lua can parse
+        res.json({ status: "OK", code: script });
     } catch (err) {
         res.json({ status: "FAIL", message: "Script not found" });
     }
 });
-
-const port = process.env.PORT || 3000;
-app.listen(port, () => console.log("Server running on port " + port));
