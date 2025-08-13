@@ -44,6 +44,7 @@ app.get("/auth", (req, res) => {
 });
 
 // Code route → returns encoded script
+// Code route → returns obfuscated script
 app.get("/code", (req, res) => {
     let token = req.query.token;
 
@@ -63,15 +64,14 @@ app.get("/code", (req, res) => {
     }
 
     try {
-        let script = fs.readFileSync("real_script_obfuscated.lua", "utf8");
-        let encodedScript = btoa(script);
-        tokenData.used = true; // delete after first fetch
-        delete activeTokens[token]; // hard delete token after use
-        res.json({ status: "OK", code: encodedScript });
+        // Read as raw buffer to avoid encoding issues
+        let scriptBuffer = fs.readFileSync("real_script_obfuscated.lua");
+        tokenData.used = true; // Mark as used
+
+        res.setHeader("Content-Type", "text/plain; charset=utf-8");
+        res.setHeader("Cache-Control", "no-store");
+        res.send(scriptBuffer); // Send raw script
     } catch (err) {
         res.json({ status: "FAIL", message: "Script not found" });
     }
 });
-
-const port = process.env.PORT || 3000;
-app.listen(port, () => console.log("Server running on port " + port));
